@@ -1,0 +1,6 @@
+{
+  "name": "Gerador de Currículos IA",
+  "description": "Plataforma para gerar currículos personalizados de forma rápida, analisar compatibilidade com vagas e sugerir palavras-chave otimizadas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
