@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Job, JobApplicationStage } from "../types";
-import { Plus, Building2, Briefcase, ChevronRight, FileText, Calendar, PlusCircle, Trash2, X, Sparkles, Loader2 } from "lucide-react";
+import { 
+  Plus, Building2, Briefcase, ChevronRight, FileText, Calendar, 
+  PlusCircle, Trash2, X, Sparkles, Loader2, List, LayoutGrid 
+} from "lucide-react";
 
 interface JobsBoardProps {
   jobs: Job[];
@@ -14,6 +17,7 @@ interface JobsBoardProps {
 export default function JobsBoard({ jobs, onAddJob, onUpdateJob, onDeleteJob, onGenerateCV, isGeneratingCV }: JobsBoardProps) {
   const [isAddingJob, setIsAddingJob] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
   
   // New Job Form State
   const [newCompany, setNewCompany] = useState("");
@@ -299,20 +303,83 @@ export default function JobsBoard({ jobs, onAddJob, onUpdateJob, onDeleteJob, on
     );
   }
 
+  const getJobColumn = (job: Job): string => {
+    if (!job.stages || job.stages.length === 0) {
+      return "Salva";
+    }
+    const latestStage = job.stages[0].name;
+    if (latestStage === "Candidatura") {
+      return "Candidatura";
+    }
+    if (["Teste Técnico", "Entrevista com RH", "Entrevista Técnica", "Entrevista com Gestor"].includes(latestStage)) {
+      return "Em Processo";
+    }
+    if (["Proposta", "Aprovado"].includes(latestStage)) {
+      return "Oferta";
+    }
+    if (latestStage === "Rejeitado") {
+      return "Finalizado";
+    }
+    return "Salva";
+  };
+
+  const KANBAN_COLUMNS = [
+    { key: "Salva", name: "Salva", color: "bg-slate-100 text-slate-700 border-slate-200" },
+    { key: "Candidatura", name: "Candidatura", color: "bg-blue-50 text-blue-700 border-blue-200" },
+    { key: "Em Processo", name: "Em Processo", color: "bg-amber-50 text-amber-700 border-amber-200" },
+    { key: "Oferta", name: "Oferta", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    { key: "Finalizado", name: "Finalizado", color: "bg-rose-50 text-rose-700 border-rose-200" },
+  ];
+
+  const columnsData = KANBAN_COLUMNS.map(col => ({
+    ...col,
+    jobs: jobs.filter(j => getJobColumn(j) === col.key)
+  }));
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Vagas Salvas</h2>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight font-sans">Suas Vagas</h2>
           <p className="text-slate-500 text-sm mt-1">Gerencie suas candidaturas e gere currículos específicos</p>
         </div>
-        <button
-          onClick={() => setIsAddingJob(true)}
-          className="px-5 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-xl hover:bg-indigo-700 shadow-md flex items-center gap-2 transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          Cadastrar Vaga
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-center">
+          {jobs.length > 0 && (
+            <div className="flex items-center bg-slate-100 p-1 border border-slate-200 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
+                  viewMode === "list"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <List className="w-4 h-4" />
+                Lista
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("kanban")}
+                className={`p-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
+                  viewMode === "kanban"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Funil (Kanban)
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setIsAddingJob(true)}
+            className="px-5 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-xl hover:bg-indigo-700 shadow-md flex items-center gap-2 transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Cadastrar Vaga
+          </button>
+        </div>
       </div>
 
       {jobs.length === 0 ? (
@@ -331,6 +398,59 @@ export default function JobsBoard({ jobs, onAddJob, onUpdateJob, onDeleteJob, on
             <Plus className="w-4 h-4" />
             Adicionar Primeira Vaga
           </button>
+        </div>
+      ) : viewMode === "kanban" ? (
+        <div className="flex gap-4 overflow-x-auto pb-4 pt-2 -mx-6 px-6 sm:-mx-8 sm:px-8">
+          {columnsData.map(col => (
+            <div key={col.key} className="flex-1 min-w-[260px] max-w-sm bg-slate-100/60 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 min-h-[500px] shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg border ${col.color}`}>
+                  {col.name}
+                </span>
+                <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 w-5 h-5 flex items-center justify-center rounded-full shadow-sm">
+                  {col.jobs.length}
+                </span>
+              </div>
+              
+              <div className="flex-1 flex flex-col gap-3 overflow-y-auto max-h-[60vh] pr-0.5">
+                {col.jobs.length === 0 ? (
+                  <div className="text-center py-10 text-xs font-medium text-slate-400 border border-dashed border-slate-200 rounded-xl bg-white/40">
+                    Nenhuma vaga
+                  </div>
+                ) : (
+                  col.jobs.map(job => (
+                    <div
+                      key={job.id}
+                      onClick={() => handleSelectJob(job)}
+                      className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex flex-col gap-2.5 group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div className="overflow-hidden">
+                          <h4 className="font-bold text-slate-900 text-xs truncate group-hover:text-indigo-600 transition-colors">{job.jobTitle}</h4>
+                          <p className="text-slate-500 text-[10px] font-semibold truncate">{job.companyName}</p>
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                        {job.description}
+                      </div>
+                      {job.stages.length > 0 ? (
+                        <span className="text-[9px] font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 self-start uppercase tracking-wide">
+                          {job.stages[0].name}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-extrabold text-slate-400 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 self-start uppercase tracking-wide">
+                          Salva
+                        </span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

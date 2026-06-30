@@ -21,9 +21,27 @@ export default function App() {
   const [selectedCVType, setSelectedCVType] = useState<"original" | "tailored">("original");
   const [isGeneratingCV, setIsGeneratingCV] = useState(false);
   const [systemAlert, setSystemAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isGeminiConfigured, setIsGeminiConfigured] = useState<boolean | null>(null);
 
   // Load state from LocalStorage on mount
   useEffect(() => {
+    // Verificar configuração da chave de API do Gemini no backend
+    const checkApiConfiguration = async () => {
+      try {
+        const res = await fetch("/api/health");
+        if (res.ok) {
+          const data = await res.json();
+          setIsGeminiConfigured(!!data.geminiConfigured);
+        } else {
+          setIsGeminiConfigured(false);
+        }
+      } catch (err) {
+        console.error("Falha ao verificar status de configuração da IA:", err);
+        setIsGeminiConfigured(false);
+      }
+    };
+    checkApiConfiguration();
+
     try {
       const storedProfile = localStorage.getItem("curriculum_catalyst_profile");
       if (storedProfile) {
@@ -93,6 +111,73 @@ export default function App() {
 
       triggerAlert("success", "Perfil redefinido para as configurações de exemplo.");
     }
+  };
+
+  const handleExportBackup = () => {
+    try {
+      const backupData = {
+        version: "1.0",
+        profile,
+        jobs,
+        savedCVs
+      };
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(backupData, null, 2)
+      )}`;
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", jsonString);
+      
+      const fileName = `catalisador_curriculos_backup_${new Date().toISOString().split('T')[0]}.json`;
+      downloadAnchor.setAttribute("download", fileName);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      
+      triggerAlert("success", "Backup exportado com sucesso!");
+    } catch (e) {
+      console.error(e);
+      triggerAlert("error", "Erro ao exportar o arquivo de backup.");
+    }
+  };
+
+  const handleImportBackup = (backupData: any) => {
+    try {
+      if (!backupData || !backupData.profile || !Array.isArray(backupData.jobs) || !Array.isArray(backupData.savedCVs)) {
+        throw new Error("Formato de backup inválido. Certifique-se de importar o arquivo JSON correto.");
+      }
+      
+      setProfile(backupData.profile);
+      setJobs(backupData.jobs);
+      setSavedCVs(backupData.savedCVs);
+      
+      if (backupData.savedCVs.length > 0) {
+        setTailoredCV(backupData.savedCVs[0]);
+        setSelectedCVType("tailored");
+        localStorage.setItem("curriculum_catalyst_cv", JSON.stringify(backupData.savedCVs[0]));
+      } else {
+        setTailoredCV(null);
+        setSelectedCVType("original");
+        localStorage.removeItem("curriculum_catalyst_cv");
+      }
+      
+      localStorage.setItem("curriculum_catalyst_profile", JSON.stringify(backupData.profile));
+      localStorage.setItem("curriculum_catalyst_jobs", JSON.stringify(backupData.jobs));
+      localStorage.setItem("curriculum_catalyst_cvs", JSON.stringify(backupData.savedCVs));
+      
+      triggerAlert("success", "Backup restaurado com sucesso!");
+    } catch (e: any) {
+      console.error(e);
+      triggerAlert("error", e.message || "Falha ao importar o arquivo de backup.");
+    }
+  };
+
+  const handleUpdateTailoredCV = (updatedCV: GeneratedCV) => {
+    setTailoredCV(updatedCV);
+    const updatedCVs = savedCVs.map(cv => cv.id === updatedCV.id ? updatedCV : cv);
+    setSavedCVs(updatedCVs);
+    localStorage.setItem("curriculum_catalyst_cv", JSON.stringify(updatedCV));
+    localStorage.setItem("curriculum_catalyst_cvs", JSON.stringify(updatedCVs));
+    triggerAlert("success", "Currículo personalizado atualizado com sucesso!");
   };
 
   const handleAnalyzeComplete = (report: CompatibilityReport) => {
@@ -392,12 +477,26 @@ export default function App() {
         {/* Work Area (Tab Content) */}
         <main className="flex-1 overflow-y-auto bg-slate-50 p-6 sm:p-8">
           <div className="max-w-6xl mx-auto">
+            {isGeminiConfigured === false && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-950 rounded-2xl flex items-start gap-3 shadow-sm animate-fadeIn">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-bold text-sm">Chave de API do Gemini não configurada!</h4>
+                  <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                    A chave de API <code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono font-bold text-[10px]">GEMINI_API_KEY</code> está ausente ou vazia no arquivo <code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono font-bold text-[10px]">.env</code> do backend. 
+                    As funcionalidades de análise de vagas e geração de currículos por IA não funcionarão até que a chave seja configurada.
+                  </p>
+                </div>
+              </div>
+            )}
             {activeTab === "profile" && (
               <ProfileForm 
                 profile={profile} 
                 onChange={handleProfileChange} 
                 onReset={handleResetProfile}
                 onViewStandardCV={handleViewStandardCV}
+                onExportBackup={handleExportBackup}
+                onImportBackup={handleImportBackup}
               />
             )}
 
@@ -428,6 +527,7 @@ export default function App() {
                 tailoredCV={tailoredCV} 
                 selectedType={selectedCVType} 
                 onTypeChange={setSelectedCVType} 
+                onUpdateTailoredCV={handleUpdateTailoredCV}
               />
             )}
 

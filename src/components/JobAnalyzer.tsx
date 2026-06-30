@@ -54,16 +54,22 @@ export default function JobAnalyzer({
       "serem", "serão", "suas", "seus", "sua", "seu", "esteja", "estejam"
     ]);
 
-    // Limpar pontuação e tokenizar
+    // Tokenizar preservando caracteres de tecnologias comuns (ex: Node.js, CI/CD, C++, C#)
     const words = jobDescription
       .toLowerCase()
-      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, " ")
-      .split(/\s+/);
+      .match(/[a-zA-Z0-9+#./-]+/g) || [];
 
     const freqMap: { [key: string]: number } = {};
 
     words.forEach(word => {
-      const cleanWord = word.trim().replace(/^[-+]+|[-+]+$/g, "");
+      let cleanWord = word.trim();
+      // Preservar .net mas remover outros pontos iniciais
+      if (cleanWord.startsWith(".") && !cleanWord.startsWith(".net")) {
+        cleanWord = cleanWord.substring(1);
+      }
+      // Limpar pontuações de borda, mantendo pontos internos ou barras
+      cleanWord = cleanWord.replace(/^[\/-]+|[.\\/:,;!?\\-]+$/g, "");
+      
       if (cleanWord.length > 2 && !stopWords.has(cleanWord) && !/^\d+$/.test(cleanWord)) {
         freqMap[cleanWord] = (freqMap[cleanWord] || 0) + 1;
       }
