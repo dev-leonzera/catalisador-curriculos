@@ -103,8 +103,14 @@ export default function JobAnalyzer({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Houve uma falha ao contatar a IA do servidor.");
+        let errorMsg = "Houve uma falha ao contatar a IA do servidor.";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch(e) {
+          errorMsg = "Serviço indisponível ou tempo limite esgotado. Tente novamente.";
+        }
+        throw new Error(errorMsg);
       }
 
       const report: CompatibilityReport = await response.json();

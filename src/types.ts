@@ -57,8 +57,25 @@ export interface CompatibilityReport {
   recommendations: string[];
 }
 
+export interface JobApplicationStage {
+  id: string;
+  name: string;
+  date: string;
+  notes?: string;
+}
+
+export interface Job {
+  id: string;
+  companyName: string;
+  jobTitle: string;
+  description: string;
+  stages: JobApplicationStage[];
+  createdAt: string;
+}
+
 export interface GeneratedCV {
   id: string;
+  jobId?: string; // Link to the job
   jobTitle: string;
   companyName: string;
   dateGenerated: string;

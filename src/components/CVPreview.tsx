@@ -53,7 +53,7 @@ export default function CVPreview({
 
   const handlePrint = () => {
     // Elegant printing mechanism by opening a clean printable window or using CSS media query
-    const content = printAreaRef.current?.innerHTML;
+    const content = printAreaRef.current?.outerHTML;
     if (!content) return;
 
     const printWindow = window.open("", "_blank");
@@ -69,21 +69,26 @@ export default function CVPreview({
           <meta charset="UTF-8" />
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
+            @page { margin: 1cm; }
             @media print {
-              body { background: white; color: black; padding: 0; margin: 0; }
+              body { background: white; color: black; margin: 0; padding: 0; }
               .no-print { display: none; }
+              * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              #cv-paper-container { box-shadow: none !important; border-top-width: 4px !important; }
             }
-            body { font-family: ui-sans-serif, system-ui, sans-serif; }
+            body { font-family: ui-sans-serif, system-ui, sans-serif; background: #f8fafc; }
           </style>
         </head>
-        <body class="bg-white p-8">
-          <div class="max-w-3xl mx-auto">
+        <body class="print:p-0 p-4 sm:p-8">
+          <div class="max-w-4xl mx-auto print:max-w-none">
             ${content}
           </div>
           <script>
             window.onload = function() {
-              window.print();
-              setTimeout(() => { window.close(); }, 500);
+              setTimeout(() => { 
+                window.print();
+                setTimeout(() => { window.close(); }, 500);
+              }, 500);
             };
           </script>
         </body>
@@ -208,37 +213,37 @@ export default function CVPreview({
           <div 
             id="cv-paper-container"
             ref={printAreaRef}
-            className="w-full max-w-2xl bg-white shadow-xl p-8 sm:p-12 border-t-4 border-indigo-600 flex flex-col gap-6 text-slate-900 font-sans leading-relaxed"
+            className="w-full max-w-3xl bg-white shadow-xl p-8 sm:p-12 border-t-4 border-indigo-600 flex flex-col gap-6 text-slate-900 font-sans leading-relaxed print:max-w-none print:shadow-none print:p-0 print:border-t-4 print:border-indigo-600 print:text-black"
           >
             {/* Header section */}
             <div className="flex flex-col sm:flex-row justify-between items-start border-b border-slate-100 pb-6 gap-4">
               <div>
-                <h2 id="cv-paper-name" className="text-2xl sm:text-3xl font-extrabold tracking-tighter text-slate-900 uppercase">
+                <h2 id="cv-paper-name" className="text-3xl sm:text-4xl font-extrabold tracking-tighter text-slate-900 uppercase">
                   {activeCV.name || "Seu Nome Completo"}
                 </h2>
-                <p id="cv-paper-main-role" className="text-sm font-bold text-indigo-600 uppercase tracking-wide mt-1">
+                <p id="cv-paper-main-role" className="text-base sm:text-lg font-bold text-indigo-600 uppercase tracking-wide mt-1.5">
                   {activeCV.experiences?.[0]?.role || "Especialista Profissional"}
                 </p>
               </div>
-              <div className="text-[10px] text-left sm:text-right text-slate-500 space-y-1 font-mono tracking-tight">
-                {activeCV.email && <div className="flex items-center sm:justify-end gap-1"><Mail className="w-3 h-3 inline sm:hidden" /> {activeCV.email}</div>}
-                {activeCV.phone && <div className="flex items-center sm:justify-end gap-1"><Phone className="w-3 h-3 inline sm:hidden" /> {activeCV.phone}</div>}
-                {activeCV.location && <div className="flex items-center sm:justify-end gap-1"><MapPin className="w-3 h-3 inline sm:hidden" /> {activeCV.location}</div>}
-                {activeCV.linkedin && <div className="flex items-center sm:justify-end gap-1"><LinkIcon className="w-3 h-3" /> {activeCV.linkedin}</div>}
-                {activeCV.github && <div className="flex items-center sm:justify-end gap-1"><LinkIcon className="w-3 h-3" /> {activeCV.github}</div>}
-                {activeCV.website && <div className="flex items-center sm:justify-end gap-1"><LinkIcon className="w-3 h-3" /> {activeCV.website}</div>}
+              <div className="text-[13px] sm:text-sm text-left sm:text-right text-slate-500 space-y-1 font-mono tracking-tight mt-1 sm:mt-0">
+                {activeCV.email && <div className="flex items-center sm:justify-end gap-1.5"><Mail className="w-3.5 h-3.5 inline sm:hidden" /> {activeCV.email}</div>}
+                {activeCV.phone && <div className="flex items-center sm:justify-end gap-1.5"><Phone className="w-3.5 h-3.5 inline sm:hidden" /> {activeCV.phone}</div>}
+                {activeCV.location && <div className="flex items-center sm:justify-end gap-1.5"><MapPin className="w-3.5 h-3.5 inline sm:hidden" /> {activeCV.location}</div>}
+                {activeCV.linkedin && <div className="flex items-center sm:justify-end gap-1.5"><LinkIcon className="w-3.5 h-3.5" /> {activeCV.linkedin}</div>}
+                {activeCV.github && <div className="flex items-center sm:justify-end gap-1.5"><LinkIcon className="w-3.5 h-3.5" /> {activeCV.github}</div>}
+                {activeCV.website && <div className="flex items-center sm:justify-end gap-1.5"><LinkIcon className="w-3.5 h-3.5" /> {activeCV.website}</div>}
               </div>
             </div>
 
             {/* Resume Body */}
-            <div className="flex flex-col gap-6 text-xs sm:text-sm">
+            <div className="flex flex-col gap-6 text-[15px] leading-relaxed">
               {/* Summary */}
               {activeCV.summary && (
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2 text-slate-900">
+                  <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2.5 text-slate-900">
                     Resumo Profissional
                   </h3>
-                  <p id="cv-paper-summary" className="text-slate-600 leading-relaxed font-sans pl-1">
+                  <p id="cv-paper-summary" className="text-slate-700 font-sans pl-1">
                     {activeCV.summary}
                   </p>
                 </div>
@@ -247,12 +252,12 @@ export default function CVPreview({
               {/* Competencies */}
               {activeCV.skills && activeCV.skills.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2.5 text-slate-900">
+                  <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2.5 text-slate-900">
                     Principais Competências
                   </h3>
-                  <div id="cv-paper-skills-grid" className="grid grid-cols-2 sm:grid-cols-3 gap-y-1.5 pl-1">
+                  <div id="cv-paper-skills-grid" className="grid grid-cols-2 sm:grid-cols-3 gap-y-1.5 gap-x-4 pl-1">
                     {activeCV.skills.map((skill, idx) => (
-                      <div key={idx} className="text-[11px] text-slate-700 flex items-center gap-2">
+                      <div key={idx} className="text-[15px] text-slate-800 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-indigo-500 rounded-none shrink-0" />
                         <span className="truncate">{skill}</span>
                       </div>
@@ -264,19 +269,19 @@ export default function CVPreview({
               {/* Experiences */}
               {activeCV.experiences && activeCV.experiences.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-3 text-slate-900">
+                  <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-3 text-slate-900">
                     Experiência Profissional
                   </h3>
-                  <div className="flex flex-col gap-4 pl-1">
+                  <div className="flex flex-col gap-5 pl-1">
                     {activeCV.experiences.map((exp, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex flex-col sm:flex-row justify-between font-bold text-[11px] sm:text-xs text-slate-800">
+                      <div key={idx} className="space-y-1.5">
+                        <div className="flex flex-col sm:flex-row justify-between font-bold text-base text-slate-800">
                           <span>{exp.role} @ {exp.company}</span>
-                          <span className="text-slate-400 italic font-medium">
+                          <span className="text-slate-500 italic font-medium text-sm">
                             {exp.startDate} — {exp.current ? "Presente" : exp.endDate}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-600 whitespace-pre-line leading-relaxed font-sans pl-2 border-l border-slate-100">
+                        <p className="text-[15px] text-slate-600 whitespace-pre-line font-sans pl-3 border-l-2 border-slate-100">
                           {exp.description}
                         </p>
                       </div>
@@ -288,19 +293,19 @@ export default function CVPreview({
               {/* Education */}
               {activeCV.education && activeCV.education.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-3 text-slate-900">
+                  <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-3 text-slate-900">
                     Formação Acadêmica
                   </h3>
-                  <div className="flex flex-col gap-2.5 pl-1">
+                  <div className="flex flex-col gap-4 pl-1">
                     {activeCV.education.map((edu, idx) => (
-                      <div key={idx} className="text-[11px]">
-                        <div className="flex justify-between font-bold text-slate-800">
+                      <div key={idx} className="text-[15px]">
+                        <div className="flex flex-col sm:flex-row sm:justify-between font-bold text-slate-800">
                           <span>{edu.degree} em {edu.fieldOfStudy}</span>
-                          <span className="text-slate-400 font-medium italic">
+                          <span className="text-slate-500 font-medium italic text-sm">
                             {edu.startDate} — {edu.current ? "Em Curso" : edu.endDate}
                           </span>
                         </div>
-                        <div className="text-slate-500 font-medium">{edu.institution}</div>
+                        <div className="text-slate-600 font-medium mt-0.5">{edu.institution}</div>
                       </div>
                     ))}
                   </div>
@@ -310,13 +315,13 @@ export default function CVPreview({
               {/* Languages */}
               {activeCV.languages && activeCV.languages.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2 text-slate-900">
+                  <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2.5 text-slate-900">
                     Idiomas
                   </h3>
-                  <div className="flex flex-wrap gap-x-6 gap-y-1 pl-1">
+                  <div className="flex flex-wrap gap-x-8 gap-y-2 pl-1">
                     {activeCV.languages.map((l, idx) => (
-                      <div key={idx} className="text-[11px] text-slate-700">
-                        <span className="font-bold">{l.language}:</span> <span className="text-slate-500">{l.level}</span>
+                      <div key={idx} className="text-[15px] text-slate-800">
+                        <span className="font-bold">{l.language}:</span> <span className="text-slate-600">{l.level}</span>
                       </div>
                     ))}
                   </div>

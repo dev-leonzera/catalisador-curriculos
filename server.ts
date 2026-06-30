@@ -3,6 +3,14 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { setGlobalDispatcher, Agent } from "undici";
+
+// Aumenta o tempo limite global do fetch para 5 minutos para evitar HeadersTimeoutError com o Gemini
+setGlobalDispatcher(new Agent({
+  headersTimeout: 300000,
+  bodyTimeout: 300000,
+  connectTimeout: 60000,
+}));
 
 dotenv.config();
 
@@ -41,6 +49,18 @@ app.get("/api/health", (req, res) => {
     geminiConfigured: hasKey
   });
 });
+
+async function generateWithRetry(ai: GoogleGenAI, config: any, retries = 2): Promise<any> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await ai.models.generateContent(config);
+    } catch (error: any) {
+      if (i === retries - 1) throw error;
+      console.warn(`Tentativa ${i + 1} falhou, tentando novamente... Erro:`, error.message);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+}
 
 // API endpoint: Analyze job description compatibility and suggest keywords (ATS score)
 app.post("/api/analyze-job", async (req, res) => {
@@ -90,7 +110,7 @@ Educação:
 ${profile.education?.map((edu: any) => `- ${edu.degree} em ${edu.fieldOfStudy} na instituição ${edu.institution} (${edu.startDate} até ${edu.current ? 'Presente' : edu.endDate}`).join("\n")}
 """`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: "gemini-3.5-flash",
       contents: userPrompt,
       config: {
@@ -239,7 +259,7 @@ Educação:
 ${profile.education?.map((edu: any) => `${edu.degree} em ${edu.fieldOfStudy} na instituição ${edu.institution}`).join("\n")}
 """`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: "gemini-3.5-flash",
       contents: userPrompt,
       config: {

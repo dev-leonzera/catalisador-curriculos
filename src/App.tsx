@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { UserProfile, CompatibilityReport, GeneratedCV } from "./types";
+import { UserProfile, CompatibilityReport, GeneratedCV, Job } from "./types";
 import { defaultProfile } from "./data";
 import ProfileForm from "./components/ProfileForm";
 import JobAnalyzer from "./components/JobAnalyzer";
+import JobsBoard from "./components/JobsBoard";
 import CVPreview from "./components/CVPreview";
 import CVHistory from "./components/CVHistory";
 import { 
   User, Sparkles, FileText, AlertCircle, RefreshCw, CheckCircle2,
-  TrendingUp, Award, Check, History
+  TrendingUp, Award, Check, History, Briefcase
 } from "lucide-react";
 
 export default function App() {
@@ -15,7 +16,8 @@ export default function App() {
   const [activeReport, setActiveReport] = useState<CompatibilityReport | null>(null);
   const [tailoredCV, setTailoredCV] = useState<GeneratedCV | null>(null);
   const [savedCVs, setSavedCVs] = useState<GeneratedCV[]>([]);
-  const [activeTab, setActiveTab] = useState<"profile" | "analyzer" | "preview" | "history">("profile");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [activeTab, setActiveTab] = useState<"profile" | "analyzer" | "jobs" | "preview" | "history">("profile");
   const [selectedCVType, setSelectedCVType] = useState<"original" | "tailored">("original");
   const [isGeneratingCV, setIsGeneratingCV] = useState(false);
   const [systemAlert, setSystemAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -31,6 +33,11 @@ export default function App() {
       const storedReport = localStorage.getItem("curriculum_catalyst_report");
       if (storedReport) {
         setActiveReport(JSON.parse(storedReport));
+      }
+
+      const storedJobs = localStorage.getItem("curriculum_catalyst_jobs");
+      if (storedJobs) {
+        setJobs(JSON.parse(storedJobs));
       }
 
       const storedCVs = localStorage.getItem("curriculum_catalyst_cvs");
@@ -95,7 +102,7 @@ export default function App() {
   };
 
   // Call API to generate tailored CV content
-  const handleGenerateCV = async (jobDescription: string) => {
+  const handleGenerateCV = async (jobDescription: string, jobId?: string) => {
     setIsGeneratingCV(true);
     try {
       const response = await fetch("/api/generate-cv", {
@@ -110,14 +117,21 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Erro de comunicação com o servidor.");
+        let errorMsg = "Erro de comunicação com o servidor.";
+        try {
+          const errData = await response.json();
+          errorMsg = errData.error || errorMsg;
+        } catch(e) {
+          errorMsg = "Serviço indisponível ou tempo limite esgotado. Tente novamente.";
+        }
+        throw new Error(errorMsg);
       }
 
       const customData = await response.json();
       
       const generated: GeneratedCV = {
         id: `cv-${Date.now()}`,
+        jobId,
         jobTitle: customData.targetJobTitle || profile.experiences?.[0]?.role || "Vaga Otimizada",
         companyName: customData.targetCompanyName || "Empresa Alvo",
         dateGenerated: new Date().toLocaleDateString("pt-BR"),
@@ -145,6 +159,35 @@ export default function App() {
       triggerAlert("error", err.message || "Falha ao gerar currículo customizado.");
     } finally {
       setIsGeneratingCV(false);
+    }
+  };
+
+  const handleAddJob = (job: Omit<Job, "id" | "createdAt" | "stages">) => {
+    const newJob: Job = {
+      ...job,
+      id: `job-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      stages: [],
+    };
+    const updatedJobs = [newJob, ...jobs];
+    setJobs(updatedJobs);
+    localStorage.setItem("curriculum_catalyst_jobs", JSON.stringify(updatedJobs));
+    triggerAlert("success", "Vaga cadastrada com sucesso!");
+  };
+
+  const handleUpdateJob = (updatedJob: Job) => {
+    const updatedJobs = jobs.map(j => j.id === updatedJob.id ? updatedJob : j);
+    setJobs(updatedJobs);
+    localStorage.setItem("curriculum_catalyst_jobs", JSON.stringify(updatedJobs));
+    triggerAlert("success", "Vaga atualizada com sucesso!");
+  };
+
+  const handleDeleteJob = (id: string) => {
+    if (window.confirm("Deseja realmente excluir esta vaga?")) {
+      const updatedJobs = jobs.filter(j => j.id !== id);
+      setJobs(updatedJobs);
+      localStorage.setItem("curriculum_catalyst_jobs", JSON.stringify(updatedJobs));
+      triggerAlert("success", "Vaga excluída com sucesso.");
     }
   };
 
@@ -222,10 +265,24 @@ export default function App() {
                 ? "text-indigo-600 bg-indigo-50 font-medium" 
                 : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
             }`}
-            title="Análise ATS & Otimização"
+            title="Análise ATS Livre"
           >
             <Sparkles className="w-5 h-5" />
-            <span className="text-[10px] tracking-wide">Otimizar</span>
+            <span className="text-[10px] tracking-wide">Analisar</span>
+          </button>
+
+          <button
+            id="nav-tab-jobs"
+            onClick={() => setActiveTab("jobs")}
+            className={`w-full py-3 flex flex-col items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer rounded-xl ${
+              activeTab === "jobs" 
+                ? "text-indigo-600 bg-indigo-50 font-medium" 
+                : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+            }`}
+            title="Gerenciar Vagas"
+          >
+            <Briefcase className="w-5 h-5" />
+            <span className="text-[10px] tracking-wide">Vagas</span>
           </button>
 
           <button
@@ -349,6 +406,17 @@ export default function App() {
                 profile={profile} 
                 activeReport={activeReport} 
                 onAnalyze={handleAnalyzeComplete} 
+                onGenerateCV={handleGenerateCV}
+                isGeneratingCV={isGeneratingCV}
+              />
+            )}
+
+            {activeTab === "jobs" && (
+              <JobsBoard
+                jobs={jobs}
+                onAddJob={handleAddJob}
+                onUpdateJob={handleUpdateJob}
+                onDeleteJob={handleDeleteJob}
                 onGenerateCV={handleGenerateCV}
                 isGeneratingCV={isGeneratingCV}
               />
