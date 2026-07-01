@@ -1,9 +1,8 @@
-import React, { useRef, useState, useEffect } from "react";
-import { UserProfile, GeneratedCV, Experience } from "../types";
+import React, { useRef } from "react";
+import { UserProfile, GeneratedCV } from "../types";
 import { 
   FileText, Download, Printer, Copy, Check, Info,
-  Briefcase, GraduationCap, Award, Languages, MapPin, Mail, Phone, Link as LinkIcon,
-  Edit2, Save, X, Plus, Trash2
+  Briefcase, GraduationCap, Award, Languages, MapPin, Mail, Phone, Link as LinkIcon
 } from "lucide-react";
 
 interface CVPreviewProps {
@@ -11,69 +10,16 @@ interface CVPreviewProps {
   tailoredCV: GeneratedCV | null;
   selectedType: "original" | "tailored";
   onTypeChange: (type: "original" | "tailored") => void;
-  onUpdateTailoredCV?: (updatedCV: GeneratedCV) => void;
 }
 
 export default function CVPreview({ 
   originalProfile, 
   tailoredCV, 
   selectedType, 
-  onTypeChange,
-  onUpdateTailoredCV
+  onTypeChange 
 }: CVPreviewProps) {
   const [copied, setCopied] = React.useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
-
-  // States for inline editing of tailored CV
-  const [isEditing, setIsEditing] = useState(false);
-  const [editSummary, setEditSummary] = useState("");
-  const [editSkills, setEditSkills] = useState<string[]>([]);
-  const [editExperiences, setEditExperiences] = useState<Experience[]>([]);
-  const [newSkill, setNewSkill] = useState("");
-
-  // Sync edits state when active CV changes
-  useEffect(() => {
-    setIsEditing(false);
-  }, [tailoredCV, selectedType]);
-
-  const startEditing = () => {
-    if (!tailoredCV) return;
-    setEditSummary(tailoredCV.customSummary);
-    setEditSkills([...tailoredCV.customSkills]);
-    setEditExperiences(tailoredCV.customExperiences.map(exp => ({ ...exp })));
-    setIsEditing(true);
-  };
-
-  const cancelEditing = () => {
-    setIsEditing(false);
-  };
-
-  const handleSaveEdits = () => {
-    if (!tailoredCV || !onUpdateTailoredCV) return;
-    onUpdateTailoredCV({
-      ...tailoredCV,
-      customSummary: editSummary,
-      customSkills: editSkills,
-      customExperiences: editExperiences
-    });
-    setIsEditing(false);
-  };
-
-  const handleExperienceDescChange = (id: string, newDesc: string) => {
-    setEditExperiences(prev => prev.map(exp => exp.id === id ? { ...exp, description: newDesc } : exp));
-  };
-
-  const handleAddSkill = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newSkill.trim() && !editSkills.includes(newSkill.trim())) {
-      setEditSkills(prev => [...prev, newSkill.trim()]);
-      setNewSkill("");
-    }
-  };
-
-  const handleRemoveSkill = (skillToRemove: string) => {
-    setEditSkills(prev => prev.filter(s => s !== skillToRemove));
-  };
 
   const activeCV = selectedType === "tailored" && tailoredCV 
     ? {
@@ -84,9 +30,9 @@ export default function CVPreview({
         linkedin: originalProfile.linkedin,
         github: originalProfile.github,
         website: originalProfile.website,
-        summary: isEditing ? editSummary : tailoredCV.customSummary,
-        experiences: isEditing ? editExperiences : tailoredCV.customExperiences,
-        skills: isEditing ? editSkills : tailoredCV.customSkills,
+        summary: tailoredCV.customSummary,
+        experiences: tailoredCV.customExperiences,
+        skills: tailoredCV.customSkills,
         languages: originalProfile.languages,
         education: originalProfile.education,
       }
@@ -106,7 +52,6 @@ export default function CVPreview({
       };
 
   const handlePrint = () => {
-    // Elegant printing mechanism by opening a clean printable window or using CSS media query
     const content = printAreaRef.current?.outerHTML;
     if (!content) return;
 
@@ -116,123 +61,30 @@ export default function CVPreview({
       return;
     }
 
+    // Get all styles from the current document to apply to the print window
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map(el => el.outerHTML)
+      .join('\n');
+
     printWindow.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
-          <title>Currículo - ${activeCV.name}</title>
+          <title>Currículo - ${activeCV.name}${selectedType === "tailored" && tailoredCV?.jobTitle ? ` - ${tailoredCV.jobTitle}` : ''}</title>
           <meta charset="UTF-8" />
+          ${styles}
           <style>
-            @page { margin: 1cm; }
+            @page { margin: 0; size: auto; }
             @media print {
-              body { background: white; color: black; margin: 0; padding: 0; }
-              .no-print { display: none; }
-              * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              body, html { background-color: white !important; margin: 0; padding: 0; }
+              body { padding: 1.5cm 1.5cm !important; }
               #cv-paper-container { box-shadow: none !important; border-top-width: 4px !important; }
             }
-            body {
-              font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-              background: #ffffff;
-              color: #1e293b;
-              margin: 0;
-              padding: 0;
-            }
-            
-            /* Tailwind Utility Classes Mapping for Print Compatibility */
-            .w-full { width: 100%; }
-            .max-w-3xl { max-width: 48rem; }
-            .bg-white { background-color: #ffffff; }
-            .p-8 { padding: 2rem; }
-            .sm\\:p-12 { padding: 3rem; }
-            .border-t-4 { border-top-width: 4px; }
-            .border-indigo-600 { border-color: #4f46e5; }
-            .flex { display: flex; }
-            .flex-col { flex-direction: column; }
-            .gap-6 { gap: 1.5rem; }
-            .text-slate-900 { color: #0f172a; }
-            .font-sans { font-family: ui-sans-serif, system-ui, sans-serif; }
-            .leading-relaxed { line-height: 1.625; }
-            
-            .sm\\:flex-row { flex-direction: row; }
-            .justify-between { justify-content: space-between; }
-            .items-start { align-items: flex-start; }
-            .border-b { border-bottom-width: 1px; }
-            .border-slate-100 { border-color: #f1f5f9; }
-            .pb-6 { padding-bottom: 1.5rem; }
-            .gap-4 { gap: 1rem; }
-            
-            .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
-            .sm\\:text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
-            .font-extrabold { font-weight: 800; }
-            .tracking-tighter { letter-spacing: -0.05em; }
-            .uppercase { text-transform: uppercase; }
-            
-            .text-base { font-size: 1rem; line-height: 1.5rem; }
-            .sm\\:text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-            .font-bold { font-weight: 700; }
-            .text-indigo-600 { color: #4f46e5; }
-            .tracking-wide { letter-spacing: 0.025em; }
-            .mt-1\\.5 { margin-top: 0.375rem; }
-            
-            .text-\\[13px\\] { font-size: 13px; }
-            .sm\\:text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-            .text-left { text-align: left; }
-            .sm\\:text-right { text-align: right; }
-            .text-slate-500 { color: #64748b; }
-            .space-y-1 > * + * { margin-top: 0.25rem; }
-            .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-            .tracking-tight { letter-spacing: -0.025em; }
-            .mt-1 { margin-top: 0.25rem; }
-            .sm\\:mt-0 { margin-top: 0; }
-            
-            .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-            .font-black { font-weight: 900; }
-            .tracking-widest { letter-spacing: 0.1em; }
-            .border-l-2 { border-left-width: 2px; }
-            .pl-3 { padding-left: 0.75rem; }
-            .mb-2\\.5 { margin-bottom: 0.625rem; }
-            .mb-3 { margin-bottom: 0.75rem; }
-            
-            .text-slate-700 { color: #334155; }
-            .pl-1 { padding-left: 0.25rem; }
-            
-            .grid { display: grid; }
-            .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .sm\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-            .gap-y-1\\.5 { row-gap: 0.375rem; }
-            .gap-x-4 { column-gap: 1rem; }
-            
-            .text-slate-800 { color: #1e293b; }
-            .items-center { align-items: center; }
-            .gap-2 { gap: 0.5rem; }
-            
-            .w-1\\.5 { width: 0.375rem; }
-            .h-1\\.5 { height: 0.375rem; }
-            .bg-indigo-500 { background-color: #6366f1; }
-            .rounded-none { border-radius: 0px; }
-            .shrink-0 { flex-shrink: 0; }
-            .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            
-            .gap-5 { gap: 1.25rem; }
-            .space-y-1\\.5 > * + * { margin-top: 0.375rem; }
-            .italic { font-style: italic; }
-            .font-medium { font-weight: 500; }
-            .text-slate-600 { color: #475569; }
-            .whitespace-pre-line { white-space: pre-line; }
-            .border-slate-100 { border-color: #f1f5f9; }
-            
-            .flex-wrap { flex-wrap: wrap; }
-            .gap-x-8 { column-gap: 2rem; }
-            .gap-y-2 { row-gap: 0.5rem; }
-            
-            .mt-auto { margin-top: auto; }
-            .pt-6 { padding-top: 1.5rem; }
-            .border-t { border-top-width: 1px; }
-            .text-\\[9px\\] { font-size: 9px; }
-            .text-slate-300 { color: #cbd5e1; }
+            body { background-color: white !important; }
           </style>
         </head>
-        <body class="print:p-0 p-4 sm:p-8">
-          <div class="max-w-4xl mx-auto print:max-w-none">
+        <body class="bg-white">
+          <div class="max-w-4xl mx-auto">
             ${content}
           </div>
           <script>
@@ -240,7 +92,7 @@ export default function CVPreview({
               setTimeout(() => { 
                 window.print();
                 setTimeout(() => { window.close(); }, 500);
-              }, 300);
+              }, 250);
             };
           </script>
         </body>
@@ -331,73 +183,34 @@ export default function CVPreview({
           </div>
 
           {/* Action floating buttons on paper top */}
-          <div className="w-full max-w-2xl flex justify-between items-center mb-4 gap-2">
-            <div className="flex gap-2">
-              {selectedType === "tailored" && tailoredCV && onUpdateTailoredCV && (
-                isEditing ? (
-                  <>
-                    <button
-                      id="btn-save-edits"
-                      onClick={handleSaveEdits}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer uppercase tracking-wider"
-                    >
-                      <Save className="w-3.5 h-3.5" />
-                      Salvar Alterações
-                    </button>
-                    <button
-                      id="btn-cancel-edits"
-                      onClick={cancelEditing}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-slate-300 text-slate-700 hover:bg-slate-400 transition cursor-pointer uppercase tracking-wider"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      Cancelar
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    id="btn-start-editing"
-                    onClick={startEditing}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition cursor-pointer uppercase tracking-wider"
-                    title="Editar texto do Currículo Customizado"
-                  >
-                    <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
-                    Editar Currículo
-                  </button>
-                )
+          <div className="w-full max-w-2xl flex justify-end gap-2 mb-4">
+            <button
+              id="btn-copy-cv"
+              onClick={handleCopyText}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition cursor-pointer uppercase tracking-wider"
+              title="Copiar texto do Currículo"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-green-600" />
+                  Copiado!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  Copiar Texto
+                </>
               )}
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                id="btn-copy-cv"
-                onClick={handleCopyText}
-                disabled={isEditing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer uppercase tracking-wider"
-                title="Copiar texto do Currículo"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-green-600" />
-                    Copiado!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    Copiar Texto
-                  </>
-                )}
-              </button>
-              <button
-                id="btn-print-cv"
-                onClick={handlePrint}
-                disabled={isEditing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer uppercase tracking-wider"
-                title="Imprimir ou Salvar em PDF"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                Imprimir / PDF
-              </button>
-            </div>
+            </button>
+            <button
+              id="btn-print-cv"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition cursor-pointer uppercase tracking-wider"
+              title="Imprimir ou Salvar em PDF"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Imprimir / PDF
+            </button>
           </div>
 
           {/* REAL CV PAPER WITH GEOMETRIC BALANCE DESIGN */}
@@ -429,19 +242,7 @@ export default function CVPreview({
             {/* Resume Body */}
             <div className="flex flex-col gap-6 text-[15px] leading-relaxed">
               {/* Summary */}
-              {selectedType === "tailored" && isEditing ? (
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2.5 text-slate-900">
-                    Resumo Profissional (Editável)
-                  </h3>
-                  <textarea
-                    value={editSummary}
-                    onChange={(e) => setEditSummary(e.target.value)}
-                    rows={4}
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-              ) : activeCV.summary && (
+              {activeCV.summary && (
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2.5 text-slate-900">
                     Resumo Profissional
@@ -453,37 +254,7 @@ export default function CVPreview({
               )}
 
               {/* Competencies */}
-              {selectedType === "tailored" && isEditing ? (
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2.5 text-slate-900">
-                    Principais Competências (Editável)
-                  </h3>
-                  <div className="space-y-3 pl-1">
-                    <div className="flex flex-wrap gap-2">
-                      {editSkills.map((skill, idx) => (
-                        <span key={idx} className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 text-slate-700 px-2.5 py-1 text-xs font-semibold rounded-lg">
-                          {skill}
-                          <button type="button" onClick={() => handleRemoveSkill(skill)} className="text-slate-400 hover:text-rose-600 p-0.5 rounded transition cursor-pointer">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                    <form onSubmit={handleAddSkill} className="flex gap-2 max-w-sm">
-                      <input
-                        type="text"
-                        placeholder="Adicionar competência..."
-                        value={newSkill}
-                        onChange={(e) => setNewSkill(e.target.value)}
-                        className="flex-1 px-3 py-1.5 border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg"
-                      />
-                      <button type="submit" className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 rounded-lg flex items-center gap-1 cursor-pointer">
-                        <Plus className="w-3.5 h-3.5" /> Adicionar
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              ) : activeCV.skills && activeCV.skills.length > 0 && (
+              {activeCV.skills && activeCV.skills.length > 0 && (
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-2.5 text-slate-900">
                     Principais Competências
@@ -500,31 +271,7 @@ export default function CVPreview({
               )}
 
               {/* Experiences */}
-              {selectedType === "tailored" && isEditing ? (
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-3 text-slate-900">
-                    Experiência Profissional (Editável)
-                  </h3>
-                  <div className="flex flex-col gap-5 pl-1">
-                    {editExperiences.map((exp, idx) => (
-                      <div key={idx} className="space-y-2">
-                        <div className="flex justify-between font-bold text-base text-slate-800">
-                          <span>{exp.role} @ {exp.company}</span>
-                          <span className="text-slate-500 italic font-medium text-sm">
-                            {exp.startDate} — {exp.current ? "Presente" : exp.endDate}
-                          </span>
-                        </div>
-                        <textarea
-                          value={exp.description}
-                          onChange={(e) => handleExperienceDescChange(exp.id, e.target.value)}
-                          rows={4}
-                          className="w-full p-2.5 border border-slate-200 rounded-lg text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none whitespace-pre-line font-sans"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : activeCV.experiences && activeCV.experiences.length > 0 && (
+              {activeCV.experiences && activeCV.experiences.length > 0 && (
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-widest border-l-2 border-indigo-600 pl-3 mb-3 text-slate-900">
                     Experiência Profissional
@@ -586,10 +333,9 @@ export default function CVPreview({
               )}
             </div>
 
-            {/* Paper Footer */}
-            <div className="mt-auto pt-6 border-t border-slate-100 flex justify-between text-[9px] uppercase tracking-widest text-slate-300 font-mono">
-              <div>Gerado por Gerador de Currículos IA</div>
-              <div>Página 1 de 1</div>
+            {/* End marker / Footer to ground the design */}
+            <div className="mt-auto pt-6 border-t border-slate-100 flex justify-end text-[10px] font-bold text-slate-300 font-mono">
+              <div className="w-8 h-1 bg-indigo-100 rounded-full"></div>
             </div>
           </div>
         </div>

@@ -44,6 +44,7 @@ export interface KeywordSuggestion {
   category: 'hard' | 'soft' | 'tool' | 'other';
   importance: 'high' | 'medium' | 'low';
   justification: string;
+  whereToInclude: string;
 }
 
 export interface CompatibilityReport {

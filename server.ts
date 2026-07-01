@@ -81,7 +81,7 @@ Sua tarefa é analisar o perfil profissional de um candidato contra o anúncio d
 Você deve:
 1. Avaliar a compatibilidade geral (ATS score) de 0 a 100.
 2. Identificar habilidades correspondentes (matchingSkills) e habilidades importantes em falta (missingSkills) com base na descrição fornecida.
-3. Sugerir palavras-chave cruciais encontradas no anúncio da vaga que o candidato deve incluir no currículo (em português).
+3. Sugerir palavras-chave cruciais encontradas no anúncio da vaga que o candidato deve incluir no currículo (em português), indicando de forma clara onde incluí-las (ex: "Adicionar na Experiência Y", "Incluir no Resumo Profissional").
 4. Listar pontos fortes (strengths), pontos de melhoria (weaknesses), e recomendações práticas (recommendations) para otimizar o currículo para essa vaga específica.
 
 ATENÇÃO PARA VAGAS FORA DA ÁREA PRINCIPAL OU MAIS SIMPLES (Ex: Candidato técnico/especialista querendo vaga de Assistente Administrativo, Recepção, Comercial, etc):
@@ -155,9 +155,13 @@ ${profile.education?.map((edu: any) => `- ${edu.degree} em ${edu.fieldOfStudy} n
                   justification: {
                     type: Type.STRING,
                     description: "Breve explicação do porquê esse termo é importante para essa vaga específica."
+                  },
+                  whereToInclude: {
+                    type: Type.STRING,
+                    description: "Sugestão clara de onde no currículo incluir essa palavra-chave (ex: 'No Resumo Profissional', 'Na experiência na empresa X', 'Na seção de Habilidades')."
                   }
                 },
-                required: ["keyword", "category", "importance", "justification"]
+                required: ["keyword", "category", "importance", "justification", "whereToInclude"]
               }
             },
             strengths: {
@@ -226,6 +230,7 @@ REGRAS CRUCIALMENTE IMPORTANTES:
 3. Escreva um resumo profissional personalizado e persuasivo em português, de acordo com o perfil e a vaga.
 4. Organize as novas descrições de cargo em bullet points profissionais altamente atraentes.
 5. Selecione as melhores habilidades e sugira complementos relevantes que o candidato realmente demonstra possuir com base em seu histórico profissional.
+6. FILTRO E PRIORIZAÇÃO DE EXPERIÊNCIAS: Analise o histórico e selecione APENAS as experiências que dão o melhor 'match' com a vaga de destino. Priorize rigorosamente experiências com o mesmo cargo da vaga em questão ou cargos similares. Inclua outras experiências apenas se demonstrarem habilidades transferíveis valiosas. Omita experiências completamente irrelevantes, a não ser que o usuário tenha pouquíssima experiência.
 
 ATENÇÃO PARA TRANSIÇÃO DE CARREIRA E VAGAS FORA DA ÁREA OU MAIS SIMPLES (Ex: Desenvolvedor querendo vaga de Assistente Administrativo ou cargo menos complexo):
 Se a vaga de destino for fora da área do usuário (como área administrativa, atendimento, suporte de escritório) e exigir menor qualificação:
@@ -282,7 +287,7 @@ ${profile.education?.map((edu: any) => `${edu.degree} em ${edu.fieldOfStudy} na 
             },
             customExperiences: {
               type: Type.ARRAY,
-              description: "Lista de experiências reescritas profissionalmente. Deve conter o mesmo ID de cada experiência e manter o cargo, empresa e períodos idênticos, reescrevendo somente a descrição de forma otimizada para a vaga (em português, preferencialmente usando bullet points estruturados).",
+              description: "Lista de experiências selecionadas e reescritas profissionalmente. Inclua APENAS as experiências mais relevantes para a vaga de destino, priorizando cargos idênticos ou que tragam forte impacto para a vaga. Deve conter o mesmo ID da experiência original e manter o cargo, empresa e períodos idênticos, reescrevendo somente a descrição de forma otimizada para a vaga (em português, preferencialmente usando bullet points estruturados).",
               items: {
                 type: Type.OBJECT,
                 properties: {

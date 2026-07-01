@@ -3,7 +3,7 @@ import { UserProfile, Experience, Education, Language } from "../types";
 import { 
   User, Mail, Phone, MapPin, Linkedin, Github, Globe, 
   Briefcase, GraduationCap, Languages, Award, Plus, Trash2, 
-  Save, RotateCcw, AlertCircle, FileText, Download, Upload
+  Save, RotateCcw, AlertCircle, FileText
 } from "lucide-react";
 
 interface ProfileFormProps {
@@ -11,40 +11,11 @@ interface ProfileFormProps {
   onChange: (profile: UserProfile) => void;
   onReset: () => void;
   onViewStandardCV?: () => void;
-  onExportBackup?: () => void;
-  onImportBackup?: (backupData: any) => void;
 }
 
-export default function ProfileForm({ 
-  profile, 
-  onChange, 
-  onReset, 
-  onViewStandardCV,
-  onExportBackup,
-  onImportBackup
-}: ProfileFormProps) {
+export default function ProfileForm({ profile, onChange, onReset, onViewStandardCV }: ProfileFormProps) {
   const [newSkill, setNewSkill] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const json = JSON.parse(event.target?.result as string);
-        if (onImportBackup) {
-          onImportBackup(json);
-        }
-      } catch (err) {
-        alert("O arquivo selecionado não é um JSON de backup válido.");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
 
   const handlePersonalChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -212,37 +183,6 @@ export default function ProfileForm({
             <Save className="w-4 h-4 text-slate-500" />
             {saveStatus === "saved" ? "Salvo com sucesso!" : "Salvar Dados"}
           </button>
-          {onExportBackup && (
-            <button
-              id="btn-export-backup"
-              onClick={onExportBackup}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition cursor-pointer shadow-sm"
-              title="Baixar arquivo de backup com perfil, vagas e currículos"
-            >
-              <Download className="w-4 h-4 text-slate-500" />
-              Exportar Backup
-            </button>
-          )}
-          {onImportBackup && (
-            <>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".json"
-                className="hidden"
-              />
-              <button
-                id="btn-import-backup"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition cursor-pointer shadow-sm"
-                title="Carregar perfil e dados a partir de um arquivo JSON"
-              >
-                <Upload className="w-4 h-4 text-slate-500" />
-                Importar Backup
-              </button>
-            </>
-          )}
           {onViewStandardCV && (
             <button
               id="btn-view-standard"

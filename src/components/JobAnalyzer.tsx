@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UserProfile, CompatibilityReport } from "../types";
+import { UserProfile, CompatibilityReport, KeywordSuggestion } from "../types";
 import { sampleJobDescriptions } from "../data";
 import { 
   Sparkles, AlertCircle, FileText, CheckCircle2, XCircle, 
@@ -25,7 +25,7 @@ export default function JobAnalyzer({
   const [jobDescription, setJobDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeKeywordJustification, setActiveKeywordJustification] = useState<string | null>(null);
+  const [activeKeyword, setActiveKeyword] = useState<KeywordSuggestion | null>(null);
   const [copiedWord, setCopiedWord] = useState<string | null>(null);
 
   const freqKeywords = React.useMemo(() => {
@@ -54,22 +54,16 @@ export default function JobAnalyzer({
       "serem", "serão", "suas", "seus", "sua", "seu", "esteja", "estejam"
     ]);
 
-    // Tokenizar preservando caracteres de tecnologias comuns (ex: Node.js, CI/CD, C++, C#)
+    // Limpar pontuação e tokenizar
     const words = jobDescription
       .toLowerCase()
-      .match(/[a-zA-Z0-9+#./-]+/g) || [];
+      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, " ")
+      .split(/\s+/);
 
     const freqMap: { [key: string]: number } = {};
 
     words.forEach(word => {
-      let cleanWord = word.trim();
-      // Preservar .net mas remover outros pontos iniciais
-      if (cleanWord.startsWith(".") && !cleanWord.startsWith(".net")) {
-        cleanWord = cleanWord.substring(1);
-      }
-      // Limpar pontuações de borda, mantendo pontos internos ou barras
-      cleanWord = cleanWord.replace(/^[\/-]+|[.\\/:,;!?\\-]+$/g, "");
-      
+      const cleanWord = word.trim().replace(/^[-+]+|[-+]+$/g, "");
       if (cleanWord.length > 2 && !stopWords.has(cleanWord) && !/^\d+$/.test(cleanWord)) {
         freqMap[cleanWord] = (freqMap[cleanWord] || 0) + 1;
       }
@@ -424,10 +418,10 @@ export default function JobAnalyzer({
                         id={`keyword-badge-${idx}`}
                         type="button"
                         onClick={() => {
-                          setActiveKeywordJustification(
-                            activeKeywordJustification === kw.keyword 
+                          setActiveKeyword(
+                            activeKeyword?.keyword === kw.keyword 
                               ? null 
-                              : kw.justification
+                              : kw
                           );
                         }}
                         className={`text-sm px-3.5 py-1.5 font-medium border rounded-xl text-left flex items-center gap-2 transition cursor-pointer hover:shadow-sm ${importanceColor}`}
@@ -441,10 +435,24 @@ export default function JobAnalyzer({
                   })}
                 </div>
 
-                {activeKeywordJustification && (
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 animate-fadeIn flex items-start gap-3 shadow-inner">
-                    <HelpCircle className="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" />
-                    <p className="leading-relaxed">{activeKeywordJustification}</p>
+                {activeKeyword && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl animate-fadeIn space-y-4 shadow-inner">
+                    <div className="flex items-start gap-3">
+                      <HelpCircle className="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" />
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Por que usar?</h5>
+                        <p className="text-sm text-slate-700 leading-relaxed font-medium">{activeKeyword.justification}</p>
+                      </div>
+                    </div>
+                    {activeKeyword.whereToInclude && (
+                      <div className="flex items-start gap-3 pt-3 border-t border-slate-200">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
+                        <div>
+                          <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Onde incluir no currículo</h5>
+                          <p className="text-sm text-slate-700 leading-relaxed font-medium">{activeKeyword.whereToInclude}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
